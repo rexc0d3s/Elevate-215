@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elevate 215 — School Data Dashboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f3f3f1; --surface: #fcfcfb; --border: #dcdbd6; --hover: #ecebe7; --sel: #dde9f8;
+    --text: #0b0b0b; --text2: #52514e; --muted: #77766f; --accent: #2a78d6;
+    --good: #0ca30c; --warn: #fab219; --crit: #d03b3b; --info: #8a8980;
+    --good-bg: #e9f6e9; --warn-bg: #fff5de; --crit-bg: #fbeaea; --info-bg: #efefec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #111110; --surface: #1a1a19; --border: #3a3a37; --hover: #242422; --sel: #1d3047;
+      --text: #ffffff; --text2: #c3c2b7; --muted: #9a998f; --accent: #3987e5;
+      --good-bg: #142c17; --warn-bg: #362b10; --crit-bg: #3a1818; --info-bg: #242422;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; }
+  h1 { font-size: 20px; margin: 0; }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  h3 { font-size: 13px; margin: 18px 0 6px; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .sub { color: var(--text2); margin: 2px 0 0; }
+  .banner { background: var(--info-bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin-top: 12px; font-size: 14px; overflow-wrap: anywhere; }
+  main { padding: 20px 24px 48px; max-width: 1400px; margin: 0 auto; }
+  .tabs { display: flex; gap: 4px; margin-top: 14px; flex-wrap: wrap; }
+  .tabs button { font: inherit; padding: 6px 14px; border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 6px; cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 12px; color: var(--text2); font-size: 14px; }
+  .controls input[type="search"], .controls select, .controls button { font: inherit; font-size: 14px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
+  .controls button { cursor: pointer; }
+  .controls input[type="search"] { min-width: 260px; }
+  .filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px 12px; margin-bottom: 12px; font-size: 13px; color: var(--text2); }
+  .filters label { display: flex; flex-direction: column; gap: 2px; }
+  .filters select { font: inherit; font-size: 14px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 16px; }
+  .coverage ul { margin: 4px 0 0; padding-left: 20px; }
+  .coverage li { margin: 2px 0; }
+  details.coverage { padding: 10px 18px; }
+  details.coverage > summary { cursor: pointer; font-weight: 600; }
+  .summary { display: grid; grid-template-columns: minmax(220px, 1.2fr) repeat(5, minmax(110px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .tile .label { font-size: 13px; color: var(--text2); }
+  .tile .value { font-size: 24px; font-weight: 600; margin-top: 2px; }
+  .tile .note { font-size: 12px; color: var(--muted); }
+  .overall { border-width: 2px; }
+  .overall.match { border-color: var(--good); background: var(--good-bg); }
+  .overall.review { border-color: var(--warn); background: var(--warn-bg); }
+  .overall.mismatch { border-color: var(--crit); background: var(--crit-bg); }
+  .layout { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; align-items: start; }
+  .index { padding: 0; overflow: hidden; }
+  .index .scroll { max-height: calc(100vh - 40px); overflow: auto; }
+  .index table { font-size: 13px; }
+  .index thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; cursor: pointer; user-select: none; white-space: nowrap; }
+  .index thead th[aria-sort="ascending"]::after { content: " ▲"; }
+  .index thead th[aria-sort="descending"]::after { content: " ▼"; }
+  .index tbody tr { cursor: pointer; }
+  .index tbody tr:hover { background: var(--hover); }
+  .index tbody tr[aria-selected="true"] { background: var(--sel); }
+  .index tbody tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .view { position: sticky; top: 8px; max-height: calc(100vh - 16px); overflow: auto; }
+  .school-head { display: flex; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; align-items: baseline; }
+  .school-name { font-size: 20px; font-weight: 600; }
+  .meta { font-size: 13px; color: var(--text2); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); white-space: nowrap; color: var(--text); background: var(--surface); }
+  .badge.match { background: var(--good-bg); border-color: var(--good); }
+  .badge.review { background: var(--warn-bg); border-color: var(--warn); }
+  .badge.mismatch { background: var(--crit-bg); border-color: var(--crit); }
+  .badge.info { background: var(--info-bg); border-color: var(--info); }
+  .badge.excluded { background: var(--info-bg); border: 1px dashed var(--text2); font-weight: 600; }
+  .notice { font-size: 13px; background: var(--info-bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; margin-top: 10px; }
+  .notice.excluded { border: 1px dashed var(--text2); }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text2); font-weight: 600; font-size: 13px; }
+  table.kv th { width: 50%; font-weight: 500; }
+  .col { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
+  #sourceTable th, #sourceTable td { white-space: nowrap; font-size: 13px; }
+  #sourceTable thead th { position: sticky; top: 0; background: var(--surface); }
+  .src { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .nodata { font-style: italic; color: var(--muted); white-space: nowrap; }
+  .nodata.missing { color: var(--crit); }
+  .flags { margin: 0; padding-left: 0; list-style: none; }
+  .flags li { margin: 4px 0; font-size: 14px; }
+  .note-item { border-left: 3px solid var(--border); padding: 4px 10px; margin: 8px 0; }
+  .note-item .meta { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .note-item blockquote { margin: 4px 0 0; white-space: pre-wrap; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  .empty-view { color: var(--text2); text-align: center; padding: 40px 10px; }
+  @media (max-width: 1100px) { .summary { grid-template-columns: repeat(3, 1fr); } .layout { grid-template-columns: 1fr; } .view { position: static; max-height: none; } .index .scroll { max-height: 50vh; } }
+  @media (max-width: 700px) { .grid2, .summary { grid-template-columns: 1fr; } header, main { padding-left: 16px; padding-right: 16px; } .controls input[type="search"] { min-width: 0; width: 100%; } }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Elevate 215 — School Data Dashboard</h1>
+  <p class="sub">Spec v2 · Read-only view · <span id="today"></span></p>
+  <div class="banner">📄 <strong>Source:</strong> <span id="srcFile"></span> (sheet “School Rollup”). Every value is shown exactly as it appears in the file. Blank cells show as <em>No Data</em>, never as 0 or a guess.</div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="dashboard" aria-selected="true">Schools</button>
+    <button role="tab" data-tab="reconcile" aria-selected="false">Review</button>
+    <button role="tab" data-tab="source" aria-selected="false">Source Data</button>
+  </nav>
+</header>
+
+<main>
+  <div class="summary" id="summary"></div>
+
+  <section id="tab-dashboard">
+    <details class="card coverage" id="coverage"></details>
+
+    <div class="controls">
+      <input type="search" id="search" placeholder="Search school name, School Number, or AUN…" aria-label="Search by school name, School Number, or AUN">
+      <button type="button" id="clearFilters">Clear filters</button>
+      <span id="shownCount"></span>
+    </div>
+    <div class="filters" id="filters"></div>
+
+    <div class="layout">
+      <div class="card index">
+        <div class="scroll">
+          <table id="indexTable">
+            <thead><tr></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card view" id="view"></div>
+    </div>
+  </section>
+
+  <section id="tab-reconcile" hidden>
+    <div class="card">
+      <h2>Reconcile check: dashboard vs. source</h2>
+      <div class="controls">
+        <input type="search" id="flagSearch" placeholder="Filter flags…" aria-label="Filter flags">
+        <label><input type="checkbox" id="showInfo"> Include ℹ️ notes (not reported, excluded)</label>
+        <label><input type="checkbox" id="simulate"> Simulate a copy error (to test the ❌ check)</label>
+        <span id="flagCount"></span>
+      </div>
+      <div class="scroll">
+        <table id="flagTable">
+          <thead><tr><th>School</th><th>School Number</th><th>Field</th><th>Source</th><th>Dashboard</th><th>Issue</th><th>Where</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-source" hidden>
+    <div class="card">
+      <h2 id="sourceTitle"></h2>
+      <div class="scroll"><table id="sourceTable"></table></div>
+    </div>
+  </section>
+</main>
+
+<!--
+  SOURCE DATA is NOT stored in this file (schooldata/ is git-ignored).
+  It loads from ../schooldata/school-data.js, which build-data.py generates from the CSV.
+  Renée's notes, once available, load the same way from ../schooldata/school-notes.js (optional).
+-->
+<script src="../schooldata/school-data.js"></script>
+<script src="../schooldata/school-notes.js"></script>
+
+<script>
+// ---------------------------------------------------------------------------
+// Parse the school CSV (loaded from ../schooldata/school-data.js). Every cell
+// stays a string, exactly as in the file, so nothing is rounded or reformatted.
+// Row numbers match the file (row 1 = header).
+// ---------------------------------------------------------------------------
+const SRC_FILE = "Elevate215-School-Data - PHL School Performance Model.xlsx - School Rollup.csv";
+const NOTES_FILE = "school-notes.csv";
+const ID = "SchoolNumber"; // primary school identifier
+
+function parseCSV(text) {
+  const rows = []; let row = [], f = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+      else f += c;
+    } else if (c === '"') q = true;
+    else if (c === ",") { row.push(f); f = ""; }
+    else if (c === "\n") { row.push(f); rows.push(row); row = []; f = ""; }
+    else if (c !== "\r") f += c;
+  }
+  if (f !== "" || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+
+if (typeof window.SCHOOL_DATA_CSV !== "string") {
+  document.querySelector("main").innerHTML = '<div class="card"><h2>❌ School data not found</h2>' +
+    '<p>This dashboard loads its data from <code>schooldata/school-data.js</code>, which is kept out of git. ' +
+    'Put the School Rollup CSV in <code>schooldata/</code>, then run <code>python dashboard/build-data.py</code> and reload this page.</p></div>';
+  throw new Error("schooldata/school-data.js is missing");
+}
+
+const toRecords = (raw, header) => raw.slice(1).map((cells, i) => {
+  const fields = {};
+  header.forEach((c, j) => fields[c] = cells[j] ?? "");
+  return { id: i + 2, row: i + 2, cellCount: cells.length, fields };
+});
+const RAW = parseCSV(window.SCHOOL_DATA_CSV);
+const HEADER = RAW[0];
+const SOURCE_RECORDS = toRecords(RAW, HEADER);
+
+// Renée's notes (optional). Connected to schools by SchoolNumber, never by name alone.
+const NOTES_CONNECTED = typeof window.SCHOOL_NOTES_CSV === "string";
+const NOTES_RAW = NOTES_CONNECTED ? parseCSV(window.SCHOOL_NOTES_CSV) : [[]];
+const NOTES_HEADER = NOTES_RAW[0] || [];
+const NOTES = toRecords(NOTES_RAW, NOTES_HEADER);
+const NOTE_COLS = ["SchoolNumber", "School", "Date", "Note", "Source", "Status"];
+
+// ---------------------------------------------------------------------------
+// Columns. DISPLAY sections follow Spec v2. BLANK_GROUPS decide what a blank
+// cell means (see blankKind). Any column not listed still appears under
+// "Other columns", so nothing is dropped.
+// ---------------------------------------------------------------------------
+const DASH = " — ";
+const EXCLUDED_BAND = "Excluded (Selection Criteria)";
+const TESTS = [["PSSA Reading", "Reading"], ["PSSA Math", "Math"],
+  ["Keystone Algebra I", "Keystone Algebra I"], ["Keystone Biology", "Keystone Biology"], ["Keystone Literature", "Keystone Literature"]];
+const TEST_PARTS = [["N Scored_2025", "Students scored"], ["PctProficient_2025", "Actual % proficient"],
+  ["Predicted", "Predicted %"], ["Residual", "Residual"], ["Band", "Performance band"]];
+const tcol = (t, p) => t + DASH + p;
+
+const LABELS = {
+  SchoolName: "School Name", SchoolNumber: "School Number", AUN: "AUN", SchoolType: "School Type",
+  "GradeSpan_2025-26": "Grade Span", DistrictName: "District",
+  "Current Enrollment (SY 2025-26)": "Current Enrollment", "Authorized Enrollment Cap (SY 2025-26)": "Authorized Enrollment Cap",
+  "Unused Seats": "Unused Seats", "PctBlackHispanic_2025-26": "% Black/Hispanic", "PctLowIncome_2025-26": "% Low Income",
+  "Simple Avg Residual": "Simple Average Residual", "Enrollment-Weighted Avg Residual": "Enrollment-Weighted Average Residual",
+  "Above Line Count": "Above Line Count", "Within 5 Count": "Within 5 Count", "Below Line Count": "Below Line Count",
+  "Tests With Data": "Tests With Data", "Fill Tier": "Fill Tier", "EAPI Tier": "EAPI Tier",
+  ExcludedSelectionCriteria: "Excluded Selection Criteria",
+};
+
+let DISPLAY = [
+  { key: "overview", title: "School Overview", cols: ["SchoolName", "SchoolNumber", "AUN", "SchoolType", "GradeSpan_2025-26", "DistrictName"] },
+  { key: "enroll", title: "Student & Enrollment Information", cols: ["Current Enrollment (SY 2025-26)",
+    "Authorized Enrollment Cap (SY 2025-26)", "Unused Seats", "PctBlackHispanic_2025-26", "PctLowIncome_2025-26"] },
+  { key: "tests", title: "Academic Performance", cols: TESTS.flatMap(([t]) => TEST_PARTS.map(([p]) => tcol(t, p))) },
+  { key: "overall", title: "Overall Performance", cols: ["Simple Avg Residual", "Enrollment-Weighted Avg Residual",
+    "Above Line Count", "Within 5 Count", "Below Line Count", "Tests With Data"] },
+  { key: "class", title: "School Status / Classification", cols: ["Fill Tier", "EAPI Tier", "ExcludedSelectionCriteria"] },
+];
+const EXPECTED_MISSING = DISPLAY.flatMap(s => s.cols).filter(c => !HEADER.includes(c));
+DISPLAY = DISPLAY.map(s => ({ ...s, cols: s.cols.filter(c => HEADER.includes(c)) }));
+const OTHER = HEADER.filter(c => !DISPLAY.some(s => s.cols.includes(c)));
+if (OTHER.length) DISPLAY.push({ key: "other", title: "Other columns", cols: OTHER });
+
+// Groups of columns the source fills in together. A group that is entirely
+// blank for a school = "not reported"; a single blank inside a filled group = missing.
+const BLANK_GROUPS = [
+  ...TESTS.map(([t]) => ({ title: t, test: t, cols: TEST_PARTS.map(([p]) => tcol(t, p)) })),
+  { title: "Average residuals", cols: ["Simple Avg Residual", "Enrollment-Weighted Avg Residual"] },
+  { title: "Enrollment (SY 2025-26)", cols: ["Current Enrollment (SY 2025-26)", "Authorized Enrollment Cap (SY 2025-26)", "Unused Seats", "Fill Tier"] },
+  { title: "EAPI Tier", cols: ["EAPI Tier"] },
+].map(g => ({ ...g, cols: g.cols.filter(c => HEADER.includes(c)) })).filter(g => g.cols.length);
+const groupOf = col => BLANK_GROUPS.find(g => g.cols.includes(col)) || null;
+
+// Reporting year, read only from the column name (e.g. "_2025", "_2025-26", "(SY 2025-26)").
+function yearOf(col) {
+  const m = /\(SY (\d{4}-\d{2})\)$/.exec(col) || /_(\d{4}(?:-\d{2})?)$/.exec(col);
+  return m ? m[1] : null;
+}
+const YEARS = [...new Set(HEADER.map(yearOf).filter(Boolean))];
+const YEARS_DIFFER = YEARS.length > 1;
+const yearsIn = cols => [...new Set(cols.map(yearOf).filter(Boolean))];
+
+// ---------------------------------------------------------------------------
+// Dashboard layer: a verbatim copy of each source record. The "simulate"
+// switch deliberately corrupts one value to prove the reconcile check works.
+// ---------------------------------------------------------------------------
+function buildDashboard(simulate) {
+  const records = SOURCE_RECORDS.map(r => ({ ...r, fields: { ...r.fields } }));
+  if (simulate && records[0]) {
+    const col = tcol("PSSA Reading", "PctProficient_2025");
+    records[0].fields[col] = records[0].fields[col] === "0" ? "1" : "0";
+  }
+  return records;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+const TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
+const isBlank = v => String(v ?? "").trim() === "";
+const nameOf = r => r.fields.SchoolName || `(no name, row ${r.row})`;
+const isExcluded = r => String(r.fields.ExcludedSelectionCriteria).trim().toUpperCase() === "TRUE";
+const normName = s => s.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\b(school|sch|the)\b/g, "").replace(/\s+/g, " ").trim();
+const hasAny = (rec, cols) => cols.some(c => !isBlank(rec.fields[c]));
+
+function parseDate(s) {
+  s = String(s).trim();
+  let m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+  if (m) return new Date(+m[3], +m[1] - 1, +m[2]);
+  m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+}
+
+const ICON = { match: "✅", review: "⚠️", mismatch: "❌", info: "ℹ️" };
+const WORD = { match: "Match", review: "Needs Review", mismatch: "Mismatch", info: "Note" };
+const RANK = { info: -1, match: 0, review: 1, mismatch: 2 };
+
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === "class") e.className = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null) e.append(k instanceof Node ? k : document.createTextNode(String(k)));
+  return e;
+}
+const badge = (level, text, title) => el("span", { class: `badge ${level}`, title }, `${ICON[level] ?? ""} ${text ?? WORD[level]}`.trim());
+const excludedBadge = () => el("span", { class: "badge excluded", title: "ExcludedSelectionCriteria = TRUE in the source" }, "⊘ Excluded (selection criteria)");
+
+// Why a blank cell is blank, using only what the same row says.
+//   "not-reported": every column in its group is blank for this school
+//   "excluded":     Predicted/Residual blank and that test's Band is "Excluded (Selection Criteria)"
+//   "missing":      anything else
+function blankKind(rec, col) {
+  const g = groupOf(col);
+  if (g && g.cols.every(c => isBlank(rec.fields[c]))) return "not-reported";
+  if (g && g.test && /(Predicted|Residual)$/.test(col) && rec.fields[tcol(g.test, "Band")] === EXCLUDED_BAND) return "excluded";
+  return "missing";
+}
+const BLANK_TEXT = {
+  "not-reported": ["No Data", "Not reported: every field in this group is blank in the source for this school"],
+  excluded: ["No Data (excluded)", `Blank in source; this test's band is “${EXCLUDED_BAND}”`],
+  missing: ["No Data ⚠️", "Missing: blank in the source while related fields have values"],
+};
+// Show a source value exactly. Blank shows "No Data" (never 0). A real 0 shows as 0.
+function val(rec, col) {
+  const v = rec.fields[col];
+  if (!isBlank(v)) return v;
+  const kind = blankKind(rec, col);
+  const [text, title] = BLANK_TEXT[kind];
+  return el("span", { class: `nodata ${kind}`, title }, text);
+}
+const label = col => el("span", {}, LABELS[col] ?? col, LABELS[col] && LABELS[col] !== col ? el("span", { class: "col" }, col) : null);
+const yearChip = cols => {
+  const ys = yearsIn(cols);
+  if (!ys.length) return null;
+  return YEARS_DIFFER
+    ? badge("review", `Reporting year ${ys.join(", ")} · differs from other sections`, `Years found in column names: ${YEARS.join(", ")}`)
+    : badge("info", `Reporting year ${ys.join(", ")}`);
+};
+
+// ---------------------------------------------------------------------------
+// Reconcile check
+// ---------------------------------------------------------------------------
+function reconcile(dash) {
+  const items = [];
+  const push = (level, rec, field, source, dashboard, issue, whereText) =>
+    items.push({ level, row: rec ? rec.row : null, num: rec ? rec.fields[ID] : "", school: rec ? nameOf(rec) : "—",
+      field, source, dashboard, issue, where: whereText ?? (rec ? `rollup row ${rec.row}` : "rollup file") });
+  let cellsMatched = 0;
+
+  // 0. File layout.
+  for (const c of EXPECTED_MISSING)
+    push("review", null, c, "—", "—", "Expected column not found in source file", "header (row 1)");
+  for (const s of SOURCE_RECORDS) if (s.cellCount !== HEADER.length)
+    push("mismatch", s, "(row)", `${s.cellCount} cells`, `${HEADER.length} columns`, "Row has a different number of cells than the header");
+
+  // 1. Field-by-field comparison of dashboard against source, plus blanks and exclusions.
+  const dashById = new Map(dash.map(d => [d.id, d]));
+  for (const s of SOURCE_RECORDS) {
+    const d = dashById.get(s.id);
+    if (!d) { push("mismatch", s, "(record)", nameOf(s), "—", "Dropped from dashboard"); continue; }
+    const notedGroups = new Set();
+    for (const col of HEADER) {
+      const sv = s.fields[col], dv = d.fields[col];
+      if (sv !== dv) push("mismatch", s, col, sv, dv, col === "SchoolName" ? "Changed school name" : "Changed value");
+      else cellsMatched++;
+      if (!isBlank(sv)) continue;
+      const kind = blankKind(s, col), g = groupOf(col);
+      if (kind === "not-reported") {
+        if (!notedGroups.has(g.title)) push("info", s, g.title, "", "No Data", `Not reported (all ${g.cols.length} fields blank in source)`);
+        notedGroups.add(g.title);
+      } else if (kind === "excluded") push("info", s, col, "", "No Data", `Blank; band is “${EXCLUDED_BAND}”`);
+      else push("review", s, col, "", "No Data", "Missing value");
+    }
+    if (isExcluded(s)) push("info", s, "ExcludedSelectionCriteria", s.fields.ExcludedSelectionCriteria, d.fields.ExcludedSelectionCriteria, "Excluded by source selection criteria (still shown)");
+  }
+  const srcIds = new Set(SOURCE_RECORDS.map(s => s.id));
+  for (const d of dash) if (!srcIds.has(d.id))
+    push("mismatch", d, "(record)", "—", "present", "On dashboard but not in the source file");
+
+  // 2. Every school present and uniquely identified by SchoolNumber.
+  const dashNums = new Set(dash.map(r => r.fields[ID]));
+  for (const s of SOURCE_RECORDS) {
+    if (isBlank(s.fields[ID])) push("review", s, ID, "", "No Data", "No SchoolNumber, so this school can't be uniquely identified");
+    else if (!dashNums.has(s.fields[ID])) push("mismatch", s, ID, s.fields[ID], "—", "Missing school");
+  }
+
+  // 3. Duplicates. All copies are kept.
+  const dupes = (keyFn, what) => {
+    const m = new Map();
+    for (const s of SOURCE_RECORDS) { const k = keyFn(s); if (isBlank(k)) continue; if (!m.has(k)) m.set(k, []); m.get(k).push(s); }
+    for (const recs of m.values()) if (recs.length > 1)
+      for (const s of recs) push("review", s, what, recs.map(r => `row ${r.row}`).join(", "), "all kept", `Duplicate ${what} (rows ${recs.map(r => r.row).join(", ")})`);
+  };
+  dupes(s => s.fields[ID], "SchoolNumber");
+  dupes(s => s.fields.SchoolName, "SchoolName");
+  dupes(s => JSON.stringify(s.fields), "record");
+
+  // 4. Conflicts: one AUN with different DistrictNames, or one DistrictName with different AUNs.
+  const conflict = (keyCol, valCol) => {
+    const m = new Map();
+    for (const s of SOURCE_RECORDS) {
+      const k = s.fields[keyCol]; if (isBlank(k)) continue;
+      if (!m.has(k)) m.set(k, new Map());
+      const v = s.fields[valCol]; if (!m.get(k).has(v)) m.get(k).set(v, []); m.get(k).get(v).push(s);
+    }
+    for (const [k, vals] of m) if (vals.size > 1) {
+      const desc = [...vals].map(([v, recs]) => `“${v}” (rows ${recs.map(r => r.row).join(", ")})`).join(" vs ");
+      for (const recs of vals.values()) for (const s of recs)
+        push("review", s, valCol, desc, "all shown", `Conflicting ${valCol} for ${keyCol} ${k}`);
+    }
+  };
+  conflict("AUN", "DistrictName");
+  conflict("DistrictName", "AUN");
+
+  // 5. Similar names. Kept apart by SchoolNumber, never merged.
+  const variants = new Map();
+  for (const s of SOURCE_RECORDS) {
+    const k = normName(s.fields.SchoolName || ""); if (!k) continue;
+    if (!variants.has(k)) variants.set(k, new Map());
+    variants.get(k).set(s.fields.SchoolName, s);
+  }
+  for (const set of variants.values()) if (set.size > 1)
+    for (const s of set.values())
+      push("review", s, "SchoolName", [...set.keys()].map(n => `“${n}”`).join(" vs "), "kept separate", "Similar school names. Kept apart by SchoolNumber");
+
+  // 6. Notes (when connected): each must point to a real SchoolNumber.
+  if (NOTES_CONNECTED) {
+    for (const c of NOTE_COLS) if (!NOTES_HEADER.includes(c))
+      push("review", null, c, "—", "—", `Notes file has no “${c}” column`, `${NOTES_FILE} header`);
+    const byNum = new Map(SOURCE_RECORDS.map(r => [r.fields[ID], r]));
+    for (const n of NOTES) {
+      const num = n.fields.SchoolNumber, school = byNum.get(num);
+      const base = { row: school ? school.row : null, num, school: n.fields.School || "—", where: `${NOTES_FILE} row ${n.row}`, dashboard: "—" };
+      const add = (field, source, issue) => items.push({ ...base, level: "review", field, source, issue });
+      if (isBlank(num)) add("SchoolNumber", "", "Note has no SchoolNumber, so it isn't connected to a school");
+      else if (!school) add("SchoolNumber", num, "Note's SchoolNumber is not in the School Rollup");
+      else if (!isBlank(n.fields.School) && n.fields.School !== school.fields.SchoolName)
+        add("School", `note: “${n.fields.School}” · rollup: “${school.fields.SchoolName}”`, "School name on note differs from rollup. Connected by SchoolNumber, name not changed");
+      if (isBlank(n.fields.Date)) add("Date", "", "Note has no date");
+      if (isBlank(n.fields.Note)) add("Note", "", "Note text is blank");
+    }
+  }
+
+  const counts = { match: cellsMatched, review: 0, mismatch: 0, info: 0 };
+  for (const i of items) counts[i.level]++;
+  const overall = counts.mismatch ? "mismatch" : counts.review ? "review" : "match";
+  const byRow = new Map();
+  for (const i of items) if (i.row != null) { if (!byRow.has(i.row)) byRow.set(i.row, []); byRow.get(i.row).push(i); }
+  return { items, counts, overall, byRow, dashSchools: dashNums };
+}
+
+// ---------------------------------------------------------------------------
+// Filters and index
+// ---------------------------------------------------------------------------
+const BLANK_OPT = "__blank__";
+const BAND_COLS = TESTS.map(([t]) => tcol(t, "Band")).filter(c => HEADER.includes(c));
+const FILTERS = [
+  { id: "fType", label: "School Type", col: "SchoolType" },
+  { id: "fGrade", label: "Grade Span", col: "GradeSpan_2025-26" },
+  { id: "fEapi", label: "EAPI Tier", col: "EAPI Tier" },
+  { id: "fFill", label: "Fill Tier", col: "Fill Tier" },
+  { id: "fBand", label: "Performance Band (any test)", band: true },
+  { id: "fExcl", label: "Excluded Selection Criteria", col: "ExcludedSelectionCriteria" },
+].filter(f => f.band ? BAND_COLS.length : HEADER.includes(f.col));
+
+function buildFilters() {
+  const box = document.getElementById("filters");
+  const naturalSort = (a, b) => a.localeCompare(b, undefined, { numeric: true });
+  for (const f of FILTERS) {
+    const values = f.band
+      ? [...new Set(SOURCE_RECORDS.flatMap(r => BAND_COLS.map(c => r.fields[c])).filter(v => !isBlank(v)))]
+      : [...new Set(SOURCE_RECORDS.map(r => r.fields[f.col]).filter(v => !isBlank(v)))];
+    const hasBlank = !f.band && SOURCE_RECORDS.some(r => isBlank(r.fields[f.col]));
+    const sel = el("select", { id: f.id, oninput: renderIndex },
+      el("option", { value: "" }, "All"),
+      values.sort(naturalSort).map(v => el("option", { value: v }, v)),
+      hasBlank ? el("option", { value: BLANK_OPT }, "No Data (blank)") : null);
+    box.append(el("label", {}, f.label, sel));
+  }
+}
+function passesFilters(rec) {
+  for (const f of FILTERS) {
+    const want = document.getElementById(f.id).value;
+    if (!want) continue;
+    if (f.band) { if (!BAND_COLS.some(c => rec.fields[c] === want)) return false; }
+    else if (want === BLANK_OPT ? !isBlank(rec.fields[f.col]) : rec.fields[f.col] !== want) return false;
+  }
+  return true;
+}
+
+const INDEX_COLS = [
+  { key: "SchoolNumber", label: "School #", numeric: true },
+  { key: "SchoolName", label: "School Name" },
+  { key: "SchoolType", label: "Type" },
+  { key: "GradeSpan_2025-26", label: "Grades" },
+  { key: "EAPI Tier", label: "EAPI" },
+  { key: "Fill Tier", label: "Fill" },
+  { key: "__flags", label: "Flags" },
+];
+let sortKey = null, sortDir = 1, selectedNum = decodeURIComponent(location.hash.slice(1)) || null;
+let DASH_RECORDS = [], RESULT = null;
+
+function renderIndex() {
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  const recs = DASH_RECORDS.filter(r => passesFilters(r) &&
+    (!q || [r.fields.SchoolName, r.fields.SchoolNumber, r.fields.AUN].some(v => String(v).toLowerCase().includes(q))));
+  if (sortKey) {
+    const col = INDEX_COLS.find(c => c.key === sortKey);
+    recs.sort((a, b) => {
+      const x = a.fields[sortKey], y = b.fields[sortKey];
+      if (isBlank(x) !== isBlank(y)) return isBlank(x) ? 1 : -1; // No Data always last
+      return sortDir * (col.numeric ? (+x - +y) : String(x).localeCompare(String(y), undefined, { numeric: true }));
+    });
+  }
+  document.querySelector("#indexTable thead tr").replaceChildren(...INDEX_COLS.map(c => el("th", {
+    "aria-sort": sortKey === c.key ? (sortDir > 0 ? "ascending" : "descending") : null,
+    title: c.key === "__flags" ? null : "Click to sort",
+    onclick: c.key === "__flags" ? null : () => { sortDir = sortKey === c.key ? -sortDir : 1; sortKey = c.key; renderIndex(); },
+  }, c.label)));
+  const body = document.querySelector("#indexTable tbody");
+  body.replaceChildren(...recs.map(r => {
+    const flags = RESULT.byRow.get(r.row) || [];
+    const issues = flags.filter(x => RANK[x.level] >= RANK.review);
+    const worst = issues.some(x => x.level === "mismatch") ? "mismatch" : "review";
+    const cellFor = c => {
+      if (c.key === "__flags") return el("td", {},
+        isExcluded(r) ? el("span", { title: "Excluded (selection criteria)" }, "⊘ ") : null,
+        issues.length ? el("span", { title: `${issues.length} item(s) to review` }, `${ICON[worst]} ${issues.length}`) : null);
+      const v = r.fields[c.key];
+      return el("td", {}, isBlank(v) ? el("span", { class: "nodata" }, "No Data") : v);
+    };
+    const select = () => selectSchool(r.fields[ID]);
+    return el("tr", { tabindex: 0, "aria-selected": String(r.fields[ID] === selectedNum), "data-num": r.fields[ID],
+      onclick: select, onkeydown: e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(); } } },
+      INDEX_COLS.map(cellFor));
+  }));
+  if (!recs.length) body.append(el("tr", {}, el("td", { colspan: INDEX_COLS.length, class: "sub" }, "No schools match these filters.")));
+  document.getElementById("shownCount").textContent = `Showing ${recs.length} of ${DASH_RECORDS.length} schools`;
+}
+
+function selectSchool(num) {
+  selectedNum = num;
+  history.replaceState(null, "", "#" + encodeURIComponent(num));
+  document.querySelectorAll("#indexTable tbody tr").forEach(tr => tr.setAttribute("aria-selected", String(tr.dataset.num === num)));
+  renderView();
+}
+
+// ---------------------------------------------------------------------------
+// School view
+// ---------------------------------------------------------------------------
+const kvTable = (rec, cols) => el("table", { class: "kv" }, el("tbody", {},
+  cols.map(c => el("tr", {}, el("th", {}, label(c)), el("td", {}, val(rec, c))))));
+const section = (title, cols, ...content) => el("div", {}, el("h3", {}, title, cols ? yearChip(cols) : null), ...content);
+
+function renderView() {
+  const box = document.getElementById("view");
+  const rec = DASH_RECORDS.find(r => r.fields[ID] === selectedNum);
+  if (!rec) {
+    box.replaceChildren(el("div", { class: "empty-view" }, "Select a school from the index to see its full record."));
+    return;
+  }
+  const f = rec.fields, D = key => DISPLAY.find(s => s.key === key);
+  const flags = RESULT.byRow.get(rec.row) || [];
+
+  // Academic performance: a test row appears only when the source has data for it.
+  const withData = TESTS.filter(([t]) => hasAny(rec, TEST_PARTS.map(([p]) => tcol(t, p))));
+  const noData = TESTS.filter(t => !withData.includes(t));
+  const notReported = (prefix, what) => {
+    const list = noData.filter(([t]) => t.startsWith(prefix));
+    return list.length ? el("p", { class: "meta nodata" }, `${what}: No Data in source (${list.map(([t]) => t).join(", ")}: all fields blank).`) : null;
+  };
+  const testTable = withData.length
+    ? el("div", { class: "scroll" }, el("table", {},
+        el("thead", {}, el("tr", {}, el("th", {}, "Test"), TEST_PARTS.map(([p, lbl]) => el("th", { title: p }, lbl)))),
+        el("tbody", {}, withData.map(([t, lbl]) => el("tr", {}, el("td", {}, lbl),
+          TEST_PARTS.map(([p]) => el("td", {}, val(rec, tcol(t, p)))))))))
+    : el("p", { class: "nodata" }, "No Data: no test results in the source for this school.");
+
+  // Notes connected by SchoolNumber.
+  const notes = NOTES.filter(n => n.fields.SchoolNumber === f[ID]).sort((a, b) => {
+    const da = parseDate(a.fields.Date), db = parseDate(b.fields.Date);
+    if (!da && !db) return a.row - b.row; if (!da) return 1; if (!db) return -1; return db - da;
+  });
+  const noteVal = (n, c) => isBlank(n.fields[c]) ? el("span", { class: "nodata" }, "No Data") : n.fields[c];
+  const notesBlock = !NOTES_CONNECTED
+    ? el("p", { class: "meta nodata" }, `No notes connected yet. When Renée's visit/update notes are added (schooldata/${NOTES_FILE}), they will appear here, matched by School Number ${f[ID]}.`)
+    : notes.length
+      ? notes.map((n, i) => el("div", { class: "note-item" },
+          el("div", { class: "meta" },
+            el("strong", {}, i === 0 ? "Latest" : "Earlier"),
+            el("span", {}, "Date: ", noteVal(n, "Date")),
+            el("span", {}, "Source: ", noteVal(n, "Source")),
+            el("span", {}, "Status: ", noteVal(n, "Status")),
+            n.fields.School !== f.SchoolName ? el("span", {}, "School (as written on note): ", noteVal(n, "School")) : null,
+            el("span", { class: "src" }, `${NOTES_FILE} row ${n.row}`)),
+          el("blockquote", {}, noteVal(n, "Note")),
+          NOTES_HEADER.filter(c => !NOTE_COLS.includes(c) && !isBlank(n.fields[c])).map(c => el("div", { class: "meta" }, `${c}: ${n.fields[c]}`))))
+      : el("p", { class: "meta nodata" }, `No notes for School Number ${f[ID]} in ${NOTES_FILE}.`);
+
+  const issues = flags.filter(x => RANK[x.level] >= RANK.review);
+  box.replaceChildren(...[
+    el("div", { class: "school-head" },
+      el("div", {},
+        el("div", { class: "school-name" }, isBlank(f.SchoolName) ? el("span", { class: "nodata missing" }, "No Data") : f.SchoolName),
+        el("div", { class: "meta" }, `School Number ${f[ID] || "No Data"} · AUN ${f.AUN || "No Data"}`)),
+      el("div", { class: "chips" },
+        isExcluded(rec) ? excludedBadge() : null,
+        issues.length ? badge(issues.some(x => x.level === "mismatch") ? "mismatch" : "review", `${issues.length} item${issues.length === 1 ? "" : "s"} to review`)
+          : badge("match", "Matches source"))),
+    isExcluded(rec) ? el("div", { class: "notice excluded" }, "⊘ This school is marked ExcludedSelectionCriteria = TRUE in the source. It is shown in full, but the source excludes it by its selection criteria.") : null,
+    YEARS_DIFFER ? el("div", { class: "notice" }, `ℹ️ Reporting years differ within this record (from the column names): test results are labeled ${yearsIn(D("tests").cols).join(", ") || "—"}; grade span, demographics and enrollment are labeled ${yearsIn([...D("overview").cols, ...D("enroll").cols]).join(", ") || "—"}. Other columns don't state a year.`) : null,
+    el("div", { class: "grid2" },
+      section("School Overview", D("overview").cols, kvTable(rec, D("overview").cols)),
+      section("Student & Enrollment Information", D("enroll").cols, kvTable(rec, D("enroll").cols))),
+    section("Academic Performance", D("tests").cols, testTable, notReported("PSSA", "PSSA"), notReported("Keystone", "Keystone")),
+    el("div", { class: "grid2" },
+      section("Overall Performance", D("overall").cols, kvTable(rec, D("overall").cols)),
+      section("School Status / Classification", D("class").cols, kvTable(rec, D("class").cols))),
+    D("other") ? section("Other columns", D("other").cols, kvTable(rec, D("other").cols)) : null,
+    section("School Visits & Updates", null, notesBlock),
+    el("h3", {}, "Flags"),
+    flags.length
+      ? el("ul", { class: "flags" }, [...flags].sort((a, b) => RANK[b.level] - RANK[a.level]).map(x =>
+          el("li", {}, `${ICON[x.level]} ${x.issue}`, el("span", { class: "src" }, ` · ${LABELS[x.field] ?? x.field} · ${x.where}`))))
+      : el("p", { class: "meta" }, "✅ No flags. Every value matches the source."),
+    el("p", { class: "src" }, `Source: ${SRC_FILE} › row ${rec.row}`),
+  ].filter(Boolean));
+}
+
+// ---------------------------------------------------------------------------
+// Summary, coverage, review, source
+// ---------------------------------------------------------------------------
+function renderSummary(result) {
+  const tile = (lbl, value, note, extra = "") => el("div", { class: `tile ${extra}` },
+    el("div", { class: "label" }, lbl), el("div", { class: "value" }, value), note ? el("div", { class: "note" }, note) : null);
+  const totalCells = SOURCE_RECORDS.length * HEADER.length;
+  const uniqueIds = new Set(SOURCE_RECORDS.map(r => r.fields[ID]).filter(v => !isBlank(v))).size;
+  document.getElementById("summary").replaceChildren(
+    tile("Review Status", `${ICON[result.overall]} ${WORD[result.overall]}`,
+      result.overall === "match" ? "Dashboard matches the source exactly"
+        : result.overall === "review" ? "Values match the source; some items need review"
+        : "Dashboard differs from the source. Fix before using", `overall ${result.overall}`),
+    tile("Schools", `${result.dashSchools.size} / ${SOURCE_RECORDS.length}`, `on dashboard / rows in source · ${uniqueIds} unique School Numbers`),
+    tile("Values matched", result.counts.match.toLocaleString(), `of ${totalCells.toLocaleString()} cells identical to source`),
+    tile("❌ Mismatches", result.counts.mismatch, "changed or dropped values"),
+    tile("⚠️ Needs review", result.counts.review, "missing values, duplicates, conflicts"),
+    tile("⊘ Excluded", SOURCE_RECORDS.filter(isExcluded).length, "ExcludedSelectionCriteria = TRUE, still shown"),
+  );
+}
+
+function renderCoverage() {
+  document.getElementById("coverage").replaceChildren(
+    el("summary", {}, "About this data: what's in the file and how blanks are shown"),
+    el("ul", {},
+      el("li", {}, `${SOURCE_RECORDS.length} schools (rows 2–${SOURCE_RECORDS.length + 1}), ${HEADER.length} columns. Each school is identified by its School Number.`),
+      YEARS_DIFFER ? el("li", {}, `Reporting years appear only in column names and differ: ${YEARS.join(", ")}. Sections are tagged with their year.`) : null,
+      el("li", {}, NOTES_CONNECTED ? `Notes connected from ${NOTES_FILE} (${NOTES.length} notes), matched by SchoolNumber.`
+        : "School visit/update notes are not connected yet. Each school view has a place for them, matched by School Number.")),
+    el("h3", {}, "How blank cells are shown"),
+    el("ul", {},
+      el("li", {}, el("strong", {}, "0"), " is a real value from the source and is shown as 0."),
+      el("li", {}, el("span", { class: "nodata" }, "No Data"), ": the whole group is blank for this school (e.g. no Keystone results or no enrollment figures). Tests with no data are listed but not shown as rows."),
+      el("li", {}, el("span", { class: "nodata excluded" }, "No Data (excluded)"), `: Predicted/Residual are blank and that test's band is “${EXCLUDED_BAND}”.`),
+      el("li", {}, el("span", { class: "nodata missing" }, "No Data ⚠️"), ": blank while related fields have values. Flagged for review."),
+      el("li", {}, "“Not applicable” is never assigned: the source file doesn't mark any field as not applicable, so the dashboard doesn't guess.")),
+  );
+}
+
+function renderFlagTable() {
+  const showInfo = document.getElementById("showInfo").checked;
+  const q = document.getElementById("flagSearch").value.trim().toLowerCase();
+  const rows = RESULT.items
+    .filter(i => showInfo || i.level !== "info")
+    .filter(i => !q || [i.school, i.num, i.field, i.issue, i.source].some(v => String(v).toLowerCase().includes(q)))
+    .sort((a, b) => RANK[b.level] - RANK[a.level] || (a.row ?? 1e9) - (b.row ?? 1e9));
+  document.getElementById("flagCount").textContent = `${rows.length} item${rows.length === 1 ? "" : "s"}`;
+  document.querySelector("#flagTable tbody").replaceChildren(...rows.map(i => el("tr", {},
+    el("td", {}, i.school || "—"),
+    el("td", {}, i.num || "—"),
+    el("td", {}, LABELS[i.field] ?? i.field),
+    el("td", {}, isBlank(i.source) ? el("span", { class: "nodata" }, "blank") : i.source),
+    el("td", {}, isBlank(i.dashboard) ? "—" : i.dashboard),
+    el("td", {}, badge(i.level, i.issue)),
+    el("td", { class: "src" }, i.where))));
+}
+
+let sourceRendered = false;
+function renderSource() {
+  if (sourceRendered) return; sourceRendered = true;
+  document.getElementById("sourceTitle").textContent = `${SRC_FILE} (${SOURCE_RECORDS.length} rows + header)`;
+  document.getElementById("sourceTable").replaceChildren(
+    el("thead", {}, el("tr", {}, el("th", {}, "Row"), HEADER.map(c => el("th", {}, c)))),
+    el("tbody", {}, RAW.slice(1).map((cells, i) => el("tr", {}, el("td", { class: "src" }, i + 2),
+      cells.map(c => el("td", {}, isBlank(c) ? el("span", { class: "nodata" }, "—") : c))))));
+}
+
+function render() {
+  DASH_RECORDS = buildDashboard(document.getElementById("simulate").checked);
+  RESULT = reconcile(DASH_RECORDS);
+  renderSummary(RESULT);
+  renderIndex();
+  renderView();
+  renderFlagTable();
+  window.__lastResult = RESULT;
+}
+
+document.getElementById("today").textContent = "Loaded " + TODAY.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+document.getElementById("srcFile").textContent = SRC_FILE;
+buildFilters();
+document.getElementById("search").addEventListener("input", renderIndex);
+document.getElementById("clearFilters").addEventListener("click", () => {
+  document.getElementById("search").value = "";
+  for (const f of FILTERS) document.getElementById(f.id).value = "";
+  renderIndex();
+});
+document.getElementById("simulate").addEventListener("input", render);
+for (const id of ["showInfo", "flagSearch"]) document.getElementById(id).addEventListener("input", renderFlagTable);
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", x === b));
+  for (const t of ["dashboard", "reconcile", "source"]) document.getElementById("tab-" + t).hidden = t !== b.dataset.tab;
+  if (b.dataset.tab === "source") renderSource();
+}));
+if (!selectedNum && SOURCE_RECORDS[0]) selectedNum = SOURCE_RECORDS[0].fields[ID];
+renderCoverage();
+render();
+</script>
+</body>
+</html>

@@ -1,95 +1,182 @@
-# School Data Dashboard — Spec v1: Reconcile Check
+# School Data Dashboard — Spec v2
 
-## Goal
+## Purpose
 
-Build a simple dashboard for Elevate 215 that brings school performance information and school visit/update notes into one place so Stacy can quickly review the latest information for each school.
+Build a simple, read-only dashboard for Elevate 215 that brings school performance and school-level information into one organized view, allowing Stacy to quickly review the most current information available for each school.
 
 ## Input
 
-Excel spreadsheets provided by Renée containing information such as:
+The dashboard will use the School Rollup spreadsheet as the primary school-performance data source.
 
-- School names
-- Performance metrics
-- Results and numbers
-- Dates
-- Statuses
-- School visit notes
-- School updates
+The source currently contains 301 schools and includes:
 
-The attached/sample spreadsheets are the source of truth.
+**School identification**
+- AUN
+- School Number
+- District Name
+- School Name
+- School Type
+- Grade Span
 
-## Output
+**Student population**
+- % Black/Hispanic
+- % Low Income
+- Current Enrollment
+- Authorized Enrollment Cap
+- Unused Seats
 
-An organized dashboard where each school has a clear view of:
+**Performance data**
+- PSSA Reading
+- PSSA Math
+- Keystone Algebra I
+- Keystone Biology
+- Keystone Literature
 
-- School name
-- Performance metrics
-- Results/numbers
-- Date of the information
-- Current status
-- Latest school update
-- School visit/notes
-- Missing information
-- Potentially outdated information
+**Performance calculations**
+- Number of students scored
+- % proficient
+- Predicted proficiency
+- Residual
+- Performance Band
 
-Information that is missing, incomplete, or outdated is clearly flagged, never filled in.
+**School-level performance summaries**
+- Simple Average Residual
+- Enrollment-Weighted Average Residual
+- Above Line Count
+- Within 5 Count
+- Below Line Count
+- Tests With Data
 
-## Reconciliation Rules
+**School classifications**
+- Fill Tier
+- EAPI Tier
+- Excluded Selection Criteria
+
+## Dashboard Structure
+
+The dashboard should have a master school index that uses the SchoolNumber as the primary school identifier.
+
+Each school should have its own view/card containing:
+
+### School Overview
+- School Name
+- School Number
+- AUN
+- School Type
+- Grade Span
+- District
+
+### Student & Enrollment Information
+- Current Enrollment
+- Authorized Enrollment Cap
+- Unused Seats
+- % Black/Hispanic
+- % Low Income
+
+### Academic Performance
+- Reading: Actual % Proficient
+- Reading: Predicted %
+- Reading: Residual
+- Reading: Performance Band
+- Math: Actual % Proficient
+- Math: Predicted %
+- Math: Residual
+- Math: Performance Band
+- Keystone results when applicable
+
+### Overall Performance
+- Simple Average Residual
+- Enrollment-Weighted Average Residual
+- Above Line Count
+- Within 5 Count
+- Below Line Count
+- Tests With Data
+
+### School Status / Classification
+- Fill Tier
+- EAPI Tier
+- Excluded Selection Criteria
+
+## Data Handling Rules
 
 The dashboard must preserve the source data exactly.
 
-1. **Do not change numbers.**
-2. **Do not change dates.**
-3. **Do not rename or alter school names from the source.**
-4. **Do not rewrite or paraphrase notes.**
-5. **Do not invent missing information.**
-6. **Do not infer a status that is not explicitly provided.**
-7. **Do not drop records, schools, metrics, dates, or notes.**
-8. **If multiple updates exist, preserve them rather than silently replacing older information.**
-9. **If information conflicts between source files, flag the conflict instead of choosing one value.**
-10. **Keep the source and dashboard traceable so a user can verify where each piece of information came from** (e.g., source file, sheet, and row).
+- Do not change, estimate, or invent values.
+- Do not replace missing values with guesses.
+- Missing data should be displayed as "No Data" or another clearly defined missing-data indicator.
+- A missing value should not automatically be treated as zero.
+- Performance bands should be displayed exactly as provided by the source.
+- School names should remain exactly as they appear in the source.
+- School Numbers should be used to distinguish schools with the same or similar names.
+- The dashboard should preserve the distinction between 0, blank/missing, and not applicable.
+- Schools marked ExcludedSelectionCriteria = True should remain visible but clearly identified as excluded.
+- Keystone metrics should only appear as available when the source contains data for that school.
 
-## Reconcile Check
+## Filtering / Navigation
 
-The dashboard includes a validation/reconciliation check that compares the dashboard against the original spreadsheets.
+Stacy should be able to quickly find a school using:
 
-The check identifies:
+- School Name
+- School Number
+- AUN
+- School Type
+- Grade Span
+- EAPI Tier
+- Fill Tier
+- Performance Band
+- Excluded Selection Criteria
 
-- Missing schools
-- Missing metrics
-- Missing numbers/results
-- Missing dates
-- Missing statuses
-- Missing notes
-- Changed values
-- Changed dates
-- Changed school names
-- Duplicate records
-- Conflicting information between source files
-- Potentially outdated information
+The dashboard should allow Stacy to select a school and see its complete available record without having to search through the original spreadsheet.
 
-Each issue is clearly flagged for review.
+## Missing / Outdated Information
 
-### Reconciliation Status
+The dashboard should clearly flag information that is:
 
-The dashboard shows an overall result:
+- Missing from the source
+- Not applicable to the school
+- Excluded by the source's selection criteria
+- From a different reporting year
 
-- ✅ **Match** — dashboard matches the source exactly
-- ⚠️ **Needs Review** — missing, duplicate, conflicting, or outdated information
-- ❌ **Mismatch** — a dashboard value differs from the source
+The dashboard should not create its own interpretation of whether a school is "good" or "bad." It should display the source's actual measurements, residuals, bands, and classifications.
 
-### Flagged Items
+## Future School Notes Integration
 
-Every flagged item is listed in a table like:
+The dashboard should be designed so that Renée's school visit/update notes can eventually be connected to the same school record.
 
-| School   | Field      | Source   | Dashboard | Issue       |
-| -------- | ---------- | -------- | --------- | ----------- |
-| School A | Attendance | 91%      | 89%       | ❌ Mismatch |
-| School B | Visit Date | 09/12/26 | —         | ⚠️ Missing  |
-| School C | Status     | On Track | On Track  | ✅ Match    |
+When notes are added, they should connect to the school using the same SchoolNumber/school identifier rather than relying only on the school name.
 
-## Done When
+Each note should retain its original:
 
-> **Every school, number, date, status, and note in the dashboard matches the source files exactly. Nothing is changed, guessed, paraphrased, or dropped.**
+- School
+- Date
+- Note/update
+- Source/person
+- Status, if provided
 
-The reconciliation check shows whether the dashboard matches the source data and identifies any discrepancies that still need review.
+This allows performance data and qualitative school updates to be viewed together without changing the original information.
+
+## Read-Only Design
+
+The dashboard is intended primarily as a viewing layer, not a replacement for the systems Elevate 215 already uses.
+
+The goal is:
+
+> Existing school data → dashboard → Stacy views current information
+
+Rather than requiring Stacy or Renée to manually re-enter information into the dashboard.
+
+## Definition of Done
+
+The dashboard is complete when:
+
+- Every school in the source is represented.
+- Every school has a unique school identifier.
+- School information matches the source exactly.
+- Performance numbers match the source exactly.
+- Missing values are preserved and clearly identified.
+- Performance bands and classifications match the source exactly.
+- Filters allow Stacy to locate schools quickly.
+- Selecting a school displays its complete available information.
+- No values are guessed, calculated differently, renamed, or silently dropped.
+- The structure allows future school visit/update notes to connect to the correct school record.
+- The dashboard can function as a read-only view of information already maintained in Elevate 215's existing data sources.
