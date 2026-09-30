@@ -7,6 +7,7 @@
 <style>
   :root {
     color-scheme: light;
+    --brand: #0e2a68;
     --bg: #f3f3f1; --surface: #fcfcfb; --border: #dcdbd6; --hover: #ecebe7; --sel: #dde9f8;
     --text: #0b0b0b; --text2: #52514e; --muted: #77766f; --accent: #2a78d6;
     --good: #0ca30c; --warn: #fab219; --crit: #d03b3b; --info: #8a8980;
@@ -22,7 +23,12 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; }
+  header { background: var(--brand); color: #fff; padding: 16px 24px; }
+  header .sub { color: rgba(255,255,255,.8); }
+  header .banner { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.25); color: #fff; }
+  header .tabs button { color: #fff; border-color: rgba(255,255,255,.4); }
+  header .tabs button:hover { background: rgba(255,255,255,.12); }
+  header .tabs button[aria-selected="true"] { background: #fff; border-color: #fff; color: var(--brand); }
   h1 { font-size: 20px; margin: 0; }
   h2 { font-size: 17px; margin: 0 0 12px; }
   h3 { font-size: 13px; margin: 18px 0 6px; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

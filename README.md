@@ -10,6 +10,57 @@ The project came from a discovery process focused on understanding how Elevate 2
 
 The research showed that the information needed to answer that question already exists, but it is spread across different people and places. The challenge is bringing those pieces together so the team can see **the whole story**.
 
+The project now includes a working first step toward that goal: a **read-only School Data Dashboard** that brings school performance data, Renée's school notes and funder/grant information together in one place for Stacy to review.
+
+---
+
+## The School Data Dashboard
+
+The dashboard is built with **SvelteKit** in the [`app/`](app/) folder and follows [SPEC1.md](SPEC1.md).
+
+It connects three existing sources, without anyone re-entering information:
+
+| Source | What it holds |
+|---|---|
+| School Rollup (PHL School Performance Model) | 301 schools: PSSA and Keystone results, predicted scores, residuals, performance bands, Fill Tier, EAPI Tier |
+| Renée's school notes | Visit date, metric, latest result, status, attendance, update notes, next follow-up |
+| Funder report data | Grant name and ID, purpose, metric, target, dates, amount pledged and received, payment status |
+
+### What Stacy sees
+
+A searchable list of every school. Each school's page shows:
+
+* **Performance**: test results from the rollup, the latest result from Renée's notes, and each grant's metric and target
+* **Latest Update**: the most recent visit date, update and next follow-up
+* **Status**: Fill Tier, EAPI Tier, exclusion status, the note's status and each grant's payment status
+* **Notes**: every note connected to the school
+* **Flags**: anything that is **missing**, **outdated** (from an older reporting year) or has a **data problem**
+
+### How it protects the information
+
+* **Nothing is changed, guessed or dropped.** Every value appears exactly as it does in the source file, and blanks show as "No Data", never as 0.
+* **Every value can be traced back to where it came from**: each section shows the source file and row.
+* **Schools are matched carefully.** The notes and funder files name schools, but don't give a School Number. A row is connected to a school only when the name matches exactly or appears in a small name map. Anything that can't be matched is listed under **Unmatched records** instead of disappearing.
+* **School data stays private.** The `schooldata/` folder is git-ignored and is read only by the server, never published.
+* **Tests check the data**: they compare every school, number, date and note in the dashboard against the source files.
+
+### Running it
+
+```sh
+cd app
+npm install
+npm run dev     # open http://localhost:5173
+npm test        # check the dashboard against the source files
+```
+
+Place the source CSV files in `schooldata/` first (see [app/README.md](app/README.md) for the file names).
+
+### What's next
+
+* **Add a School Number** to Renée's notes and the funder sheet so every row connects to the right school automatically. The current sample files use placeholder school names, so they show as unmatched.
+* **Move from CSV files to a database.** The dashboard was built so this can happen without changing the pages. The plan is in [docs/database-migration.md](docs/database-migration.md).
+* **Add payment information from Priya**, the third piece of the funder story.
+
 ---
 
 ## About Elevate 215
@@ -197,7 +248,7 @@ Stacy can focus on:
 
 ## Discovery Questions
 
-Before moving into implementation, several questions still need to be confirmed with the people who own each part of the workflow.
+Several questions still need to be confirmed with the people who own each part of the workflow before the dashboard goes beyond sample data.
 
 ### Renée
 
@@ -255,6 +306,24 @@ The goal is not to replace the people doing the work.
 * Scope document
 * Presentation
 * Proposed solution and improvement opportunities
+* Dashboard specs ([SPEC1.md](SPEC1.md) and [SPEC.md](SPEC.md))
+* School Data Dashboard (SvelteKit) with source-matching tests
+* Database migration plan
+
+---
+
+## Repository Contents
+
+| Path | What it is |
+|---|---|
+| [`app/`](app/) | The School Data Dashboard (SvelteKit) |
+| [`SPEC1.md`](SPEC1.md) | The spec the dashboard follows |
+| [`SPEC.md`](SPEC.md) | Spec v2, a more detailed spec for the school performance data |
+| [`docs/database-migration.md`](docs/database-migration.md) | Plan for moving from CSV files to a database |
+| [`dashboard/`](dashboard/) | An earlier single-file prototype of the dashboard |
+| `Elevate_215_Agent_Context.md` | Discovery context: people, workflows, systems and open questions |
+| `*.pdf`, `*.docx` | Scope document, current workflow and solution proposal |
+| `schooldata/` | Source data files (kept local, not in the repository) |
 
 ---
 
