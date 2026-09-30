@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a discovery project for Elevate 215, a Philadelphia education nonprofit, focused on the funder-reporting workflow. The question it serves is "What did my money do?". Answering it means pulling together Renée's school notes, Stacy's grant requirements and Priya's payment information.
 
-- `README.md`, `Elevate_215_Agent_Context.md`, and the PDF and DOCX files are the discovery and context material. `Elevate_215_Agent_Context.md` separates confirmed facts from open questions. Don't invent people, systems, metrics or workflows beyond it.
-- `SPEC1.md` is the spec the SvelteKit app implements. `SPEC.md` (Spec v2) is a more detailed rollup-only spec used by the older static dashboard.
+- `README.md` and `elevate-context/` (the agent context file plus the PDF and DOCX files) are the discovery and context material. `elevate-context/Elevate_215_Agent_Context.md` separates confirmed facts from open questions. Don't invent people, systems, metrics or workflows beyond it.
+- `specs/SPEC1.md` is the spec the SvelteKit app implements. `specs/SPEC.md` (Spec v2) is a more detailed rollup-only spec used by the older static dashboard.
 - `app/` is the SvelteKit dashboard, and the current build.
 - `dashboard/` is an earlier static prototype (`test-dashboard.html` plus `build-data.py`, which wraps the CSVs into `schooldata/*.js`). It is independent of `app/`.
 - `docs/database-migration.md` is the planned move from CSV to a database. It is planned only, not built.

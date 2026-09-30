@@ -16,7 +16,7 @@ The project now includes a working first step toward that goal: a **read-only Sc
 
 ## The School Data Dashboard
 
-The dashboard is built with **SvelteKit** in the [`app/`](app/) folder and follows [SPEC1.md](SPEC1.md).
+The dashboard is built with **SvelteKit** in the [`app/`](app/) folder and follows [SPEC1.md](specs/SPEC1.md).
 
 It connects three existing sources, without anyone re-entering information:
 
@@ -306,7 +306,7 @@ The goal is not to replace the people doing the work.
 * Scope document
 * Presentation
 * Proposed solution and improvement opportunities
-* Dashboard specs ([SPEC1.md](SPEC1.md) and [SPEC.md](SPEC.md))
+* Dashboard specs ([SPEC1.md](specs/SPEC1.md) and [SPEC.md](specs/SPEC.md))
 * School Data Dashboard (SvelteKit) with source-matching tests
 * Database migration plan
 
@@ -317,12 +317,11 @@ The goal is not to replace the people doing the work.
 | Path | What it is |
 |---|---|
 | [`app/`](app/) | The School Data Dashboard (SvelteKit) |
-| [`SPEC1.md`](SPEC1.md) | The spec the dashboard follows |
-| [`SPEC.md`](SPEC.md) | Spec v2, a more detailed spec for the school performance data |
+| [`specs/SPEC1.md`](specs/SPEC1.md) | The spec the dashboard follows |
+| [`specs/SPEC.md`](specs/SPEC.md) | Spec v2, a more detailed spec for the school performance data |
 | [`docs/database-migration.md`](docs/database-migration.md) | Plan for moving from CSV files to a database |
 | [`dashboard/`](dashboard/) | An earlier single-file prototype of the dashboard |
-| `Elevate_215_Agent_Context.md` | Discovery context: people, workflows, systems and open questions |
-| `*.pdf`, `*.docx` | Scope document, current workflow and solution proposal |
+| [`elevate-context/`](elevate-context/) | Discovery context (people, workflows, systems and open questions), plus the scope document, current workflow and solution proposal |
 | `schooldata/` | Source data files (kept local, not in the repository) |
 
 ---

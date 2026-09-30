@@ -1,6 +1,6 @@
 # Elevate 215 School Data Dashboard (SvelteKit)
 
-Read-only dashboard built to [SPEC1](../SPEC1.md). Each school page shows **Performance, Latest Update, Status, Notes and Flags**, with every value exactly as it appears in the source files.
+Read-only dashboard built to [SPEC1](../specs/SPEC1.md). Each school page shows **Performance, Latest Update, Status, Notes and Flags**, with every value exactly as it appears in the source files.
 
 ## Data
 
